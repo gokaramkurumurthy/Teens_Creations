@@ -13,6 +13,7 @@ function ContactForm() {
   const [formData, setFormData] = useState(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
+  const apiBaseUrl = import.meta.env.VITE_API_URL || '/api';
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -28,7 +29,7 @@ function ContactForm() {
     setStatus({ type: '', message: '' });
 
     try {
-      const response = await fetch('https://teens-creations-backend.vercel.app/api/contact', {
+      const response = await fetch(`${apiBaseUrl}/contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
