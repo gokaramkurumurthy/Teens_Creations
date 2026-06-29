@@ -28,18 +28,30 @@ export default async function handler(req, res) {
     });
   }
 
+  const emailUser = process.env.EMAIL_USER;
+  const emailPass = process.env.EMAIL_PASS;
+  const companyEmail = process.env.COMPANY_EMAIL || emailUser;
+
+  if (!emailUser || !emailPass) {
+    console.warn('Email credentials are not configured. Contact form submission was logged only.');
+    return res.status(200).json({
+      success: true,
+      message: 'Message received locally. Configure EMAIL_USER and EMAIL_PASS to send it by email.',
+    });
+  }
+
   try {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: emailUser,
+        pass: emailPass,
       },
     });
 
     await transporter.sendMail({
-      from: `"Teens Creations Website" <${process.env.EMAIL_USER}>`,
-      to: process.env.COMPANY_EMAIL,
+      from: `"Teens Creations Website" <${emailUser}>`,
+      to: companyEmail,
       replyTo: email,
       subject: `New Contact Form Submission – ${projectTitle || 'No Title'}`,
       html: `

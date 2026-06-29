@@ -73,15 +73,17 @@ app.get('/ανα/test-email', async (req, res) => {
 
 // Contact form endpoint
 app.post('/api/contact', contactLimiter, backendContactHandler);
+app.post('/api/contact.php', contactLimiter, backendContactHandler);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ success: true, message: 'Server is running!' }));
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'dist')));
+  const frontendBuildDir = path.join(__dirname, 'build');
+  app.use(express.static(frontendBuildDir));
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(path.join(frontendBuildDir, 'index.html'));
   });
 }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const initialFormData = {
   name: '',
@@ -13,7 +13,17 @@ function ContactForm() {
   const [formData, setFormData] = useState(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
-  const apiBaseUrl = import.meta.env.VITE_API_URL || '/api';
+  const formEndpoint = import.meta.env.PROD ? '/api/contact.php' : '/api/contact';
+
+  useEffect(() => {
+    if (!status.message) return undefined;
+
+    const timer = window.setTimeout(() => {
+      setStatus({ type: '', message: '' });
+    }, 4000);
+
+    return () => window.clearTimeout(timer);
+  }, [status.message]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -29,15 +39,20 @@ function ContactForm() {
     setStatus({ type: '', message: '' });
 
     try {
-      const response = await fetch(`${apiBaseUrl}/contact`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 10000);
 
-      const text = await response.text();
+      try {
+        const response = await fetch(formEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+          signal: controller.signal,
+        });
+
+        const text = await response.text();
       let result;
 
       try {
@@ -46,16 +61,26 @@ function ContactForm() {
         result = { message: text || 'Unexpected server response' };
       }
 
-      if (response.ok && result.success) {
-        setStatus({ type: 'success', message: result.message || 'Message sent successfully!' });
-        setFormData(initialFormData);
-      } else {
-        setStatus({ type: 'error', message: result.message || `Failed to send message (${response.status})` });
+        if (response.ok && result.success) {
+          setStatus({ type: 'success', message: result.message || 'Message sent successfully!' });
+          setFormData(initialFormData);
+        } else {
+          setStatus({ type: 'error', message: result.message || `Failed to send message (${response.status})` });
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          setStatus({ type: 'error', message: 'The request took too long. Please try again in a moment.' });
+        } else {
+          console.error('Form submission error:', error);
+          setStatus({ type: 'error', message: 'Sorry, there was an error sending your message. Please try again.' });
+        }
+      } finally {
+        window.clearTimeout(timeoutId);
+        setIsSubmitting(false);
       }
     } catch (error) {
-      console.error('Form submission error:', error);
+      console.error('Form submission setup error:', error);
       setStatus({ type: 'error', message: 'Sorry, there was an error sending your message. Please try again.' });
-    } finally {
       setIsSubmitting(false);
     }
   };
